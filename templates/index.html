@@ -13,7 +13,11 @@
         <link rel="stylesheet" href="../static/index.css" type="text/css"></head>
 
 <body>
-   <button  > <a href="./register"> Go To Register Page</a> </button>
+    Hi {{current_user.username }}
+   <button  > <a href="./loginForCustomer"> Go To Register Page</a> </button>
+   {% if current_user.is_authenticated %}
+   <a href="{{ url_for('logout') }}">Çıkış Yap</a>
+   {% endif %}
 </body>
 
 </html>
