@@ -13,7 +13,7 @@ login_manager = LoginManager(app)
 
 class User(UserMixin,db.Model):
     id = db.Column(db.Integer,unique=True,primary_key=True)
-    is_user = db.Column(db.Boolean,nullable=False)
+    is_user = db.Column(db.Boolean,nullable=False,default=True)
     username = db.Column(db.String(50),unique=True,nullable=False)
     password = db.Column(db.String(120), nullable=False)
     adresse = db.Column(db.String(150), nullable=False)
@@ -21,11 +21,12 @@ class User(UserMixin,db.Model):
 
 class Restaurant(UserMixin,db.Model):
     id = db.Column(db.Integer,unique=True,primary_key=True)
-    is_user = db.Column(db.Boolean,nullable=False)
+    is_user = db.Column(db.Boolean,nullable=False,default=False)
     username = db.Column(db.String(50),unique=True,nullable=False)
     password = db.Column(db.String(120), nullable=False)
     adresse = db.Column(db.String(150), nullable=False)
     plz = db.Column(db.String, nullable=True)
+    product = db.relationship('Product', backref='restaurant', lazy=True)
 
 
     def set_plz(self, plz_list):
@@ -33,6 +34,14 @@ class Restaurant(UserMixin,db.Model):
 
     def get_plz(self):
         return json.loads(self.plz) if self.plz else []
+
+
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    # receipt = db.Column(db.String(200), nullable=True)
+    price = db.Column(db.Integer, nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
 
 
 with app.app_context():
@@ -46,7 +55,8 @@ def load_user(user_id):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    restaurants = Restaurant.query.all()
+    return render_template("index.html",restaurants=restaurants)
 
 
 @app.route("/loginForCustomer",methods=['POST','GET'])
@@ -108,10 +118,32 @@ def loginForRestaurant():
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
-
     return render_template("loginForRestaurant.html")
 
 
+@app.route("/restaurant/<int:restaurant_id>")
+def restaurant_page(restaurant_id):
+    restaurant = Restaurant.query.get(restaurant_id)
+    return render_template("restaurant.html",restaurant=restaurant)
+    
+@app.route("/my_restaurant",methods=['POST','GET'])
+def my_restaurant():
+    restaurant = Restaurant.query.get(current_user.id)
+    if request.method == "POST":
+       if "add_product" in request.form:
+            product_name = request.form["product_name"]
+            price = request.form["price"]
+
+            new_product = Product(name=product_name,price=price,restaurant_id=current_user.id)
+            db.session.add(new_product)
+            db.session.commit()
+    products = Product.query.filter_by(restaurant_id=current_user.id)
+    return render_template("my_restaurant.html",restaurant=restaurant,products=products)
+    
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id)) or Restaurant.query.get(int(user_id))
 
 @app.route('/logout')
 @login_required

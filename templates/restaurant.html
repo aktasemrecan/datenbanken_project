@@ -20,7 +20,7 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if current_user.is_user == false and current_user.is_authenticated %}
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href='{{ url_for("my_restaurant")}}'>My Restaurant</a>
+                    <a class="nav-link active" aria-current="page" href='/restaurant/${current_user.id}'>My Restaurant</a>
                 </li>
                 {% else  %}
                 <li class="nav-item">
@@ -61,20 +61,15 @@
     <div class="w-100">
         <h3 class="justify-content-center  d-flex my-3">Restaurants</h3>
         <div id="restaurantsDiv" class="mx-auto">
-            {% for restaurant in restaurants %}
             <div class="card mb-2">
                 <div class="card-body">
-                    <h3 class="card-title">{{restaurant.username}}</h3>
-                    <p class="card-text"><b>Adresse:</b>{{restaurant.adresse}}</p>
-                    <p class="card-text"><b>PLZ:</b>{{restaurant.plz}}</p>
-                    <p class="card-text"> <b>Products:</b>
-                    {% for product in restaurant.product %}
-                    {{product.name}}
-                    {% endfor %}</p>
-                    <a href="{{ url_for('restaurant_page', restaurant_id=restaurant.id) }}" class="btn btn-warning">Speisekarte einsehen</a>
+                    <h5 class="card-title">{{restaurant.username}}</h5>
+                    <p class="card-text">Restaurant service area: {{restaurant.plz}}</p>
+                    <p class="card-text">Restaurant adresse: {{restaurant.adresse}}</p>
+                    <p class="card-text">Restaurant adresse: {{restaurant.adresse}}</p>
+                    <a  class="btn btn-warning">asdsa einsehen</a>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </div>
     {% endif %}
