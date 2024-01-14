@@ -58,18 +58,31 @@
         </div>
     </div>
     {% if not current_user.is_user == false %}
-    <div class="w-100">
-        <h3 class="justify-content-center  d-flex my-3">Restaurants</h3>
-        <div id="restaurantsDiv" class="mx-auto">
+    <div class="w-100 p-5 d-flex">
+        <div id="restaurantsDiv" class="w-50 me-5">
             <div class="card mb-2">
                 <div class="card-body">
                     <h5 class="card-title">{{restaurant.username}}</h5>
                     <p class="card-text">Restaurant service area: {{restaurant.plz}}</p>
                     <p class="card-text">Restaurant adresse: {{restaurant.adresse}}</p>
                     <p class="card-text">Restaurant adresse: {{restaurant.adresse}}</p>
-                    <a  class="btn btn-warning">asdsa einsehen</a>
                 </div>
             </div>
+        </div>
+        <div id="products" class="d-grid row-gap-2 ">
+            <h4>Products</h4>
+            {% for product in restaurant.product %}
+            <div style="width: 500px !important; height: 65px !important; border: 1px solid gray;border-radius: 4px !important;padding-left: 10px !important;align-items: center;" class="d-flex">
+                <div>
+                    <div>Product Name: <b>{{product.name}}</b></div>
+                    <div style="padding-bottom: 5px !important;">Product Price: <b>{{product.price}} €</b> </div>
+                </div>
+                <div class="ms-auto">
+                    <button class="btn btn-primary me-2" name="add_product">Add</button>
+                </div>
+            </div>
+            {% endfor %}
+            
         </div>
     </div>
     {% endif %}

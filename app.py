@@ -18,6 +18,22 @@ class User(UserMixin,db.Model):
     password = db.Column(db.String(120), nullable=False)
     adresse = db.Column(db.String(150), nullable=False)
     plz = db.Column(db.Integer, nullable=False)
+    shopping_cart = db.relationship('Shopping_Cart',backref='user',lazy=True)
+
+class Shopping_Cart(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    price = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+
+class Orders(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    price = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+
 
 class Restaurant(UserMixin,db.Model):
     id = db.Column(db.Integer,unique=True,primary_key=True)
@@ -56,7 +72,13 @@ def load_user(user_id):
 @app.route("/")
 def home():
     restaurants = Restaurant.query.all()
-    return render_template("index.html",restaurants=restaurants)
+    if current_user.is_authenticated:
+        if current_user.is_user:
+            return render_template("index.html",restaurants=restaurants)
+        else:
+            return redirect(url_for('my_restaurant'))
+    else:
+        return render_template("index.html",restaurants=restaurants)
 
 
 @app.route("/loginForCustomer",methods=['POST','GET'])
@@ -121,9 +143,17 @@ def loginForRestaurant():
     return render_template("loginForRestaurant.html")
 
 
-@app.route("/restaurant/<int:restaurant_id>")
+@app.route("/restaurant/<int:restaurant_id>",methods=['POST','GET'])
 def restaurant_page(restaurant_id):
     restaurant = Restaurant.query.get(restaurant_id)
+    if request.method == "POST":
+       if "add_product":
+            product_name = request.form["product_name"]
+            price = request.form["price"]
+
+            new_product = Product(name=product_name,price=price,restaurant_id=current_user.id)
+            db.session.add(new_product)
+            db.session.commit()
     return render_template("restaurant.html",restaurant=restaurant)
     
 @app.route("/my_restaurant",methods=['POST','GET'])
