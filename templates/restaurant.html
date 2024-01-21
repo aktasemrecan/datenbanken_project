@@ -20,9 +20,10 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if current_user.is_user == false and current_user.is_authenticated %}
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href='/restaurant/${current_user.id}'>My Restaurant</a>
+                    <a class="nav-link active" aria-current="page" href='/restaurant/${current_user.id}'>My
+                        Restaurant</a>
                 </li>
-                {% else  %}
+                {% else %}
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="/">Restaurants</a>
                 </li>
@@ -64,25 +65,22 @@
                 <div class="card-body">
                     <h5 class="card-title">{{restaurant.username}}</h5>
                     <p class="card-text">Restaurant service area: {{restaurant.plz}}</p>
-                    <p class="card-text">Restaurant adresse: {{restaurant.adresse}}</p>
-                    <p class="card-text">Restaurant adresse: {{restaurant.adresse}}</p>
+                    <p class="card-text">Restaurant address: {{restaurant.address}}</p>
+                    <p class="card-text">Restaurant address: {{restaurant.address}}</p>
                 </div>
             </div>
         </div>
         <div id="products" class="d-grid row-gap-2 ">
             <h4>Products</h4>
-            {% for product in restaurant.product %}
-            <div style="width: 500px !important; height: 65px !important; border: 1px solid gray;border-radius: 4px !important;padding-left: 10px !important;align-items: center;" class="d-flex">
-                <div>
-                    <div>Product Name: <b>{{product.name}}</b></div>
-                    <div style="padding-bottom: 5px !important;">Product Price: <b>{{product.price}} €</b> </div>
-                </div>
-                <div class="ms-auto">
-                    <button class="btn btn-primary me-2" name="add_product">Add</button>
-                </div>
-            </div>
+            {% for product in restaurant.products %}
+            <form method="post" action="{{ url_for('add_to_cart', product_id=product.id) }}">
+                <input type="hidden" name="restaurant_id" value="{{ restaurant.id }}">
+                <input name="product_name" value="{{ product.name }}">
+                <input name="product_price" value="{{ product.price }}">
+                <button type="submit" class="btn btn-primary me-2" name="add_product">Add {{ product.name }}</button>
+            </form>
             {% endfor %}
-            
+
         </div>
     </div>
     {% endif %}
