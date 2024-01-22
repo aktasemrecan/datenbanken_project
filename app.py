@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Flask,render_template,request,flash,redirect,url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -25,13 +26,22 @@ class ShoppingCart(db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     products = db.relationship('Product', secondary='shopping_cart_products', backref=db.backref('shopping_carts', lazy='dynamic'))
+    quantities = db.relationship('ShoppingCartProduct', backref='shopping_cart', lazy='dynamic')
+
+
+class ShoppingCartProduct(db.Model):
+    id = db.Column(db.Integer, unique=True, primary_key=True)
+    shopping_cart_id = db.Column(db.Integer, db.ForeignKey('shopping_cart.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
 
 
 shopping_cart_products = db.Table('shopping_cart_products',
     db.Column('shopping_cart_id', db.Integer, db.ForeignKey('shopping_cart.id')),
-    db.Column('product_id', db.Integer, db.ForeignKey('product.id'))
-    
+    db.Column('product_id', db.Integer, db.ForeignKey('product.id')),
+    db.Column('quantity', db.Integer, nullable=False, default=1)
 )
+
 
 class Order(db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
@@ -166,18 +176,47 @@ def shoppingCart():
     # Eğer alışveriş sepeti varsa, ürünleri al
     products_in_cart = []
     if shopping_cart:
-        products_in_cart = shopping_cart.products
+        for cart_product in shopping_cart.quantities:
+            product = Product.query.get(cart_product.product_id)
+            products_in_cart.append({
+                'product': product,
+                'quantity': cart_product.quantity
+            })
+        total_price = calculate_total(shopping_cart)
     else:
+        total_price = 0
         print("Alışveriş sepetiniz boş veya tanımlı değil.")
-    return render_template("shopping_cart.html",shoppingCart= products_in_cart)
 
+
+    print(products_in_cart)
+
+    return render_template("shopping_cart.html",shoppingCart= products_in_cart,total_price=total_price)
+
+@app.route("/orders")
+@login_required
+def my_orders():
+    user = current_user
+
+    # Get the orders for the current user
+    orders = Order.query.filter_by(user_id=user.id).all()
+
+    return render_template("orders.html", orders=orders)
 
 @app.route("/restaurant/<int:restaurant_id>", methods=['POST', 'GET'])
 def restaurant_page(restaurant_id):
     restaurant = Restaurant.query.get(restaurant_id)
 
     return render_template("restaurant.html", restaurant=restaurant)
-    
+
+def calculate_total(shopping_cart):
+    total = 0
+
+    for cart_product in shopping_cart.quantities:
+        product = Product.query.get(cart_product.product_id)
+        total += product.price * cart_product.quantity
+
+    return total
+
 
 @app.route("/add_to_cart/<int:product_id>", methods=['POST','GET'])
 @login_required
@@ -193,13 +232,112 @@ def add_to_cart(product_id):
         # Kullanıcının alışveriş sepetini al
         shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
 
-    # Ürünü alışveriş sepetine ekleyin
-    product = Product.query.get(product_id)
-    shopping_cart.products.append(product)
-    db.session.commit()
+    # Check if the product is already in the cart
+    existing_item = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
 
+    if existing_item:
+        # If the product is already in the cart, increase the quantity
+        existing_item.quantity += 1
+    else:
+        # Otherwise, add a new item with quantity 1
+        product = Product.query.get(product_id)
+        shopping_cart_product = ShoppingCartProduct(shopping_cart_id=shopping_cart.id, product_id=product_id, quantity=1)
+        db.session.add(shopping_cart_product)
+
+    db.session.commit()
     flash('Ürün sepete eklendi!', 'success')
     return redirect(url_for('restaurant_page', restaurant_id=request.form.get('restaurant_id')))
+
+
+@app.route("/reduce_quantity/<int:product_id>", methods=['POST', 'GET'])
+@login_required
+def reduce_quantity(product_id):
+
+    user = current_user
+    shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
+
+    if shopping_cart:
+        cart_product = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
+
+        if cart_product:
+            if cart_product.quantity > 1:
+                cart_product.quantity -= 1
+            else:
+                db.session.delete(cart_product)
+
+            db.session.commit()
+            flash('Ürün miktarı azaltıldı!', 'success')
+        else:
+            flash('Ürün sepetinizde bulunmamaktadır!', 'danger')
+    else:
+        flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
+
+
+    return redirect(url_for('shoppingCart'))
+
+@app.route("/increment_quantity/<int:product_id>", methods=['POST', 'GET'])
+@login_required
+def increment_quantity(product_id):
+
+    user = current_user
+    shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
+
+    if shopping_cart:
+        # Check if the product is in the shopping cart
+        cart_product = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
+
+        if cart_product:
+            cart_product.quantity += 1
+
+            db.session.commit()
+            flash('Ürün miktarı arttirildi!', 'success')
+        else:
+            flash('Ürün sepetinizde bulunmamaktadır!', 'danger')
+    else:
+        flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
+
+
+    return redirect(url_for('shoppingCart'))
+
+@app.route("/place_order", methods=['POST', 'GET'])
+@login_required
+def place_order():
+    user = current_user
+    shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
+
+    if shopping_cart:
+        # Siparişi oluştur
+        order = Order(user_id=user.id, order_date=datetime.utcnow(), total_amount=calculate_total(shopping_cart))
+
+        for cart_product in shopping_cart.quantities:
+            product = Product.query.get(cart_product.product_id)
+            order.products.append(product)
+
+        # Siparişi veritabanına kaydet
+        db.session.add(order)
+        db.session.commit()
+
+        # Alışveriş sepetini temizle
+        clear_shopping_cart(shopping_cart)
+
+        flash('Siparişiniz başarıyla alındı!', 'success')
+        return redirect(url_for('home'))
+    else:
+        flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
+        return redirect(url_for('shoppingCart'))
+
+def calculate_total(shopping_cart):
+    total = 0
+    for cart_product in shopping_cart.quantities:
+        product = Product.query.get(cart_product.product_id)
+        total += product.price * cart_product.quantity
+    return total
+
+def clear_shopping_cart(shopping_cart):
+    # Alışveriş sepetini temizle
+    for cart_product in shopping_cart.quantities:
+        db.session.delete(cart_product)
+    db.session.commit()
 
 
 @app.route("/my_restaurant",methods=['POST','GET'])

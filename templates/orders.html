@@ -14,7 +14,6 @@
 </head>
 
 <body>
-
     <div class="navbar navbar-dark bg-success   navbar-expand-lg ">
         <div class="container-fluid justify-content-between ">
             <a class="navbar-brand" href="/">Our food service</a>
@@ -61,45 +60,29 @@
             {% endif %}
         </div>
     </div>
-    {% if total_price == 0 %}
-    <div class="position-absolute start-50 bottom-50 translate-middle ">
-        <p class="border border-2 border-warning rounded-4 p-3">Please add some products :/</p>
-    </div>
-    {% endif %}
-    {% if not total_price == 0  %}
     {% if current_user.is_user == true %}
     <div class="w-100 p-5 d-flex align-items-center justify-content-center ">
-        <div class="justify-content-center d-flex ">
-            {% for order in shoppingCart %}
+        <div class="justify-content-center">
+            {% for order in orders %}
             <div class="card mb-2" style="width: 300px !important;">
-                <div class="card-body d-flex justify-content-between " style="width: 300px !important;">
-                    <div>
-                        <p class="card-text"> <b>Product:</b>
-                            {{order.product.name}} </p>
-                        <p class="card-text"> <b>Price:</b>
-                            {{order.product.price}}€</p>
-                        <p class="card-text"> <b>Quantity:</b>
-                            {{order.quantity}}</p>
-                    </div>
-                    <div class="pt-4">
-                        <a style="width: 40px;height: 40px;margin-right: 10px;" class="btn btn-primary "
-                            href="{{ url_for('increment_quantity', product_id=order.product.id) }}">
-                            +</a>
-                        <a style="width: 40px;height: 40px;" class="btn btn-danger "
-                            href="{{ url_for('reduce_quantity', product_id=order.product.id) }}">-
-                        </a>
-                    </div>
+                <div class="card-body  justify-content-between " style="width: 300px !important;">
+                    <p class="card-text"> <b>Order Date:</b>
+                        {{order.order_date}} </p>
+                    <p class="card-text"> <b>Price:</b>
+                        {{order.total_amount}}€</p>
+                    <strong>Products:</strong>
+                    <ul>
+                        {% for product in order.products %}
+                        <li>{{ product.name }} - {{ product.price }}</li>
+                        {% endfor %}
+                    </ul>
+
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-    <a style="width: 50x;height: 50px; position: absolute;bottom: 100px;"
-        class=" border border-3 border-danger rounded-3 px-2 py-2 translate-middle-x start-50">Totally: {{total_price}} €</a>
-    <a style="width: 50x;height: 50px; position: absolute;bottom: 20px;"
-        class="btn btn-warning  translate-middle-x start-50" href="{{url_for('place_order')}}">Order Products !</a>
-    {% endif %}
-    {% endif %}
+        {% endif %}
 </body>
 
 </html>
