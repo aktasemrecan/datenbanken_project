@@ -11,6 +11,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
+app.config['SQLALCHEMY_ECHO'] = True
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, unique=True, primary_key=True)
@@ -34,12 +36,14 @@ class ShoppingCartProduct(db.Model):
     shopping_cart_id = db.Column(db.Integer, db.ForeignKey('shopping_cart.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default=1)
+    restaurant_id = db.Column(db.Integer, nullable=False)
 
 
 shopping_cart_products = db.Table('shopping_cart_products',
     db.Column('shopping_cart_id', db.Integer, db.ForeignKey('shopping_cart.id')),
     db.Column('product_id', db.Integer, db.ForeignKey('product.id')),
     db.Column('quantity', db.Integer, nullable=False, default=1)
+
 )
 
 
@@ -49,6 +53,19 @@ class Order(db.Model):
     total_amount = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     products = db.relationship('Product', secondary='order_products', backref='orders', lazy='dynamic')
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)
+    quantities = db.relationship('OrderProduct', backref='order', lazy='dynamic')
+    status = db.Column(db.String(20), nullable=False, default='Pending')  # Varsayılan olarak 'Pending' belirlendi, durumları ihtiyacınıza göre özelleştirebilirsiniz
+
+
+class OrderProduct(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    product = db.relationship('Product', backref='order_products', lazy=True)
+
+
 
 # Define a many-to-many relationship table between Order and Product
 order_products = db.Table('order_products',
@@ -91,10 +108,6 @@ with app.app_context():
     db.create_all()
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
 
 @app.route("/")
 def home():
@@ -131,13 +144,26 @@ def loginForCustomer():
             user = User.query.filter_by(is_user=True,username=username).first()
 
             if user and bcrypt.check_password_hash(user.password, password):
+                print(f"Successfully retrieved user: {user.username}")
+                logout_user()
                 login_user(user)
                 flash('You are successfully log in. Now you can order something !', 'success')
+                print(f"Username: {username}, Password: {password}")
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
 
     return render_template("loginForCustomer.html")
+
+def get_next_restaurant_id():
+    last_restaurant = Restaurant.query.order_by(Restaurant.id.desc()).first()
+
+    if last_restaurant:
+        return last_restaurant.id + 1
+    else:
+        # Eğer hiç restoran yoksa başlangıç değeri belirle
+        return 1000 
+
 
 @app.route("/loginForRestaurant",methods=['POST','GET'])
 def loginForRestaurant():
@@ -149,8 +175,9 @@ def loginForRestaurant():
             address = request.form["register_address"]
             description = request.form["description"]
 
-            new_customer = Restaurant(username=username,password=hashed_password,address=address,description=description,is_user=False)
-            db.session.add(new_customer)
+            new_restaurant = Restaurant(username=username,password=hashed_password,address=address,description=description,is_user=False)
+            new_restaurant.id = get_next_restaurant_id()
+            db.session.add(new_restaurant)
             db.session.commit()
 
             flash('You are successfully registered. Now you can log in !', 'success')
@@ -162,8 +189,11 @@ def loginForRestaurant():
             restaurant = Restaurant.query.filter_by(is_user=False,username=username).first()
 
             if restaurant and bcrypt.check_password_hash(restaurant.password, password):
+                print(f"Successfully retrieved restaurant: {restaurant.username}")
+                logout_user()
                 login_user(restaurant)
                 flash('You are successfully log in. Now you can order something !', 'success')
+                print(f"Username: {username}, Password: {password}")
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
@@ -235,14 +265,20 @@ def add_to_cart(product_id):
     # Check if the product is already in the cart
     existing_item = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
 
+    product = Product.query.get(product_id)  # Define product here
+
     if existing_item:
         # If the product is already in the cart, increase the quantity
         existing_item.quantity += 1
     else:
         # Otherwise, add a new item with quantity 1
-        product = Product.query.get(product_id)
-        shopping_cart_product = ShoppingCartProduct(shopping_cart_id=shopping_cart.id, product_id=product_id, quantity=1)
-        db.session.add(shopping_cart_product)
+        existing_item = ShoppingCartProduct(shopping_cart_id=shopping_cart.id, product_id=product_id, quantity=1, restaurant_id=product.restaurant_id)
+        db.session.add(existing_item)
+
+    # Set the restaurant_id for the shopping cart product
+    product_restaurant_id = product.restaurant_id
+    existing_item.restaurant_id = product_restaurant_id
+
 
     db.session.commit()
     flash('Ürün sepete eklendi!', 'success')
@@ -311,7 +347,13 @@ def place_order():
 
         for cart_product in shopping_cart.quantities:
             product = Product.query.get(cart_product.product_id)
-            order.products.append(product)
+            
+            # Siparişe miktar (quantity) bilgisini ekleyin
+            order_product = OrderProduct(product_id=product.id, quantity=cart_product.quantity)
+            order.quantities.append(order_product)
+
+        # Set the restaurant_id for the order
+        order.restaurant_id = cart_product.restaurant_id
 
         # Siparişi veritabanına kaydet
         db.session.add(order)
@@ -325,6 +367,22 @@ def place_order():
     else:
         flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
         return redirect(url_for('shoppingCart'))
+
+
+@app.route("/restaurant-orders")
+@login_required
+def restaurant_orders():
+    if not current_user.is_user:
+        restaurant = Restaurant.query.get(current_user.id)
+
+        # Fetch orders for the current restaurant
+        orders = Order.query.filter_by(restaurant_id=current_user.id).all()
+
+        return render_template("restaurant_orders.html", restaurant=restaurant, orders=orders)
+    else:
+        # Handle the case where the current user is not a restaurant
+        flash('Access denied. You are not a restaurant user.', 'danger')
+        return redirect(url_for('home'))
 
 def calculate_total(shopping_cart):
     total = 0
@@ -359,11 +417,30 @@ def my_restaurant():
     plz_list = restaurant.get_plz()
     products = Product.query.filter_by(restaurant_id=current_user.id)
     return render_template("my_restaurant.html",restaurant=restaurant,products=products,plz_list=plz_list)
-    
 
-@login_manager.user_loader
+@app.route("/change-order-status/<int:order_id>", methods=['POST'])
+@login_required
+def change_order_status(order_id):
+    if not current_user.is_user:
+        # Siparişin restaurant tarafından kontrol edilip edilmediğini kontrol et
+        order = Order.query.get(order_id)
+
+        if order and order.restaurant_id == current_user.id:
+            new_status = request.form.get('status')
+            order.status = new_status
+            db.session.commit()
+            flash(f'Sipariş durumu başarıyla değiştirildi: {new_status}', 'success')
+        else:
+            flash('Bu siparişi güncelleme yetkiniz yok.', 'danger')
+    else:
+        flash('Access denied. You are not a restaurant user.', 'danger')
+
+    return redirect(url_for('restaurant_orders'))
+
+@login_manager.user_loader  
 def load_user(user_id):
     return User.query.get(int(user_id)) or Restaurant.query.get(int(user_id))
+
 
 @app.route('/logout')
 @login_required
