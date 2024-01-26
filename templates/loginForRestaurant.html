@@ -11,6 +11,7 @@
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
         crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../static/loginForRestaurant.css" type="text/css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 </head>
 
@@ -29,11 +30,15 @@
             <form id="fromFeatures" action="/loginForRestaurant" method="POST"
                 class="d-grid gap-3 input-group justify-content-center">
                 <h3>Register</h3>
-                <input type="text" id="register_username" name="register_username" placeholder="Username..."
+                <input type="text" id="register_username" name="register_username" placeholder="Restaurant Name"
                     class="form-control">
                 <input type="password" name="register_password" placeholder="Password..." class="form-control">
                 <input type="text" name="register_address" placeholder="Address..." class="form-control">
                 <input type="text" name="description" placeholder="Description..." class="form-control">
+                <label for="opening_hour">Opening Hour</label>
+                <input type="time"name="opening_hour" placeholder="Opening Hour" class="form-control">
+                <label for="opening_hour">Closing Hour</label>
+                <input type="time" name="closing_hour" placeholder="Closing Hour" class="form-control">
                 <button type="submit" class="btn btn-outline-primary mx-auto" name="register">Register</button>
             </form>
         </div>

@@ -11,10 +11,12 @@
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
         crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../static/my_restaurant.css" type="text/css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 
 <body>
-    <div class="navbar navbar-dark bg-success   navbar-expand-lg ">
+    <div class="navbar navbar-dark bg-warning  navbar-expand-lg ">
         <div class="container-fluid justify-content-between ">
             <a class="navbar-brand" href="/">Our food service</a>
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -94,7 +96,8 @@
             <form class="ms-5 mt-5 w-25" id="addPlzForm" action="/my_restaurant" method="POST">
                 <h3>Add PLZ</h3>
                 <div class="d-flex">
-                    <input type="text" style="background-color: bisque;border-radius:4px" name="add_plz" placeholder="PLZ" class="form-control">
+                    <input type="text" style="background-color: bisque;border-radius:4px" name="add_plz"
+                        placeholder="PLZ" class="form-control">
                     <button type="submit" class="btn btn-outline-primary mx-auto" name="add_plz">Add PLZ</button>
                 </div>
             </form>

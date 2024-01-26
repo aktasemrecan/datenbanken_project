@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import json
+from flask import jsonify
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'our_realy_realy_secret_key'
@@ -42,7 +43,8 @@ class ShoppingCartProduct(db.Model):
 shopping_cart_products = db.Table('shopping_cart_products',
     db.Column('shopping_cart_id', db.Integer, db.ForeignKey('shopping_cart.id')),
     db.Column('product_id', db.Integer, db.ForeignKey('product.id')),
-    db.Column('quantity', db.Integer, nullable=False, default=1)
+    db.Column('quantity', db.Integer, nullable=False, default=1),
+    db.Column('restaurant_id', db.Integer, nullable=False)
 
 )
 
@@ -82,6 +84,8 @@ class Restaurant(UserMixin, db.Model):
     description = db.Column(db.String(150), nullable=False)
     products = db.relationship('Product', backref='restaurant', lazy=True)
     plz_list = db.Column(db.String, nullable=True)
+    opening_hour = db.Column(db.Time, nullable=False)
+    closing_hour = db.Column(db.Time, nullable=False)
 
     def add_plz(self, plz):
         plz_list = self.get_plz()
@@ -174,8 +178,15 @@ def loginForRestaurant():
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             address = request.form["register_address"]
             description = request.form["description"]
+            opening_hour = request.form["opening_hour"]
+            closing_hour = request.form["closing_hour"]
 
-            new_restaurant = Restaurant(username=username,password=hashed_password,address=address,description=description,is_user=False)
+            opening_hour = datetime.strptime(opening_hour, "%H:%M").time()
+            closing_hour = datetime.strptime(closing_hour, "%H:%M").time()
+
+            db.session.commit()
+
+            new_restaurant = Restaurant(opening_hour=opening_hour,closing_hour=closing_hour,username=username,password=hashed_password,address=address,description=description,is_user=False)
             new_restaurant.id = get_next_restaurant_id()
             db.session.add(new_restaurant)
             db.session.commit()
@@ -197,6 +208,7 @@ def loginForRestaurant():
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
+        
     return render_template("loginForRestaurant.html")
 
 @app.route("/shopping-cart",methods=['POST','GET'])
@@ -340,33 +352,60 @@ def increment_quantity(product_id):
 def place_order():
     user = current_user
     shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
+    shopping_cart_product = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id).first()
 
-    if shopping_cart:
-        # Siparişi oluştur
-        order = Order(user_id=user.id, order_date=datetime.utcnow(), total_amount=calculate_total(shopping_cart))
+    print("Shopping Cart:", shopping_cart)
+    print("Shopping Cart Product:", shopping_cart_product)
 
-        for cart_product in shopping_cart.quantities:
-            product = Product.query.get(cart_product.product_id)
-            
-            # Siparişe miktar (quantity) bilgisini ekleyin
-            order_product = OrderProduct(product_id=product.id, quantity=cart_product.quantity)
-            order.quantities.append(order_product)
+    print(is_restaurant_open(shopping_cart_product.restaurant_id))
+    print(is_restaurant_open(shopping_cart_product.restaurant_id))
+    print(is_restaurant_open(shopping_cart_product.restaurant_id))
+    print(is_restaurant_open(shopping_cart_product.restaurant_id))
+    print(is_restaurant_open(shopping_cart_product.restaurant_id))
+    print(is_restaurant_open(shopping_cart_product.restaurant_id))
+    if is_restaurant_open(shopping_cart_product.restaurant_id):
+        print("Inside first if block")
+        # Check the current time against the restaurant's opening and closing hours
+        if shopping_cart:
+            print("Inside second if block")
+            if shopping_cart.quantities.count() > 0:
+                print("Inside third if block")
+                # Create an order
+                order = Order(user_id=user.id, order_date=datetime.utcnow(), total_amount=calculate_total(shopping_cart))
 
-        # Set the restaurant_id for the order
-        order.restaurant_id = cart_product.restaurant_id
+                for cart_product in shopping_cart.quantities:
+                    product = Product.query.get(cart_product.product_id)
 
-        # Siparişi veritabanına kaydet
-        db.session.add(order)
-        db.session.commit()
+                    # Add quantity information to the order
+                    order_product = OrderProduct(product_id=product.id, quantity=cart_product.quantity)
+                    order.quantities.append(order_product)
 
-        # Alışveriş sepetini temizle
-        clear_shopping_cart(shopping_cart)
+                # Set the restaurant_id for the order
+                order.restaurant_id = shopping_cart_product.restaurant_id
 
-        flash('Siparişiniz başarıyla alındı!', 'success')
-        return redirect(url_for('home'))
-    else:
-        flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
-        return redirect(url_for('shoppingCart'))
+                # Save the order to the database
+                db.session.add(order)
+                db.session.commit()
+
+                # Clear the shopping cart
+                clear_shopping_cart(shopping_cart)
+
+                flash('Siparişiniz başarıyla alındı!', 'success')
+                return redirect(url_for('home'))
+
+    # If any of the conditions fail, redirect to the shoppingCart page with an error message
+    print("Outside if block")
+    flash('Sipariş vermek için uygun değil. Lütfen alışveriş sepetinizi kontrol edin.', 'danger')
+    return redirect(url_for('shoppingCart'))
+
+
+# Helper function to check if the restaurant is currently open
+def is_restaurant_open(restaurantId):
+    restaurant = Restaurant.query.filter_by(id=restaurantId).first()
+    current_time = datetime.now().time()
+    opening_time = restaurant.opening_hour
+    closing_time = restaurant.closing_hour
+    return opening_time <= current_time <= closing_time
 
 
 @app.route("/restaurant-orders")
@@ -413,6 +452,15 @@ def my_restaurant():
             plz = int(request.form["add_plz"])  # Convert the input value to an integer
             restaurant.add_plz(plz)
             db.session.commit()
+        elif "set_hours" in request.form:
+            opening_hour = request.form["opening_hour"]
+            closing_hour = request.form["closing_hour"]
+
+            restaurant.opening_hour = datetime.strptime(opening_hour, "%H:%M").time()
+            restaurant.closing_hour = datetime.strptime(closing_hour, "%H:%M").time()
+
+            db.session.commit()
+
 
     plz_list = restaurant.get_plz()
     products = Product.query.filter_by(restaurant_id=current_user.id)
