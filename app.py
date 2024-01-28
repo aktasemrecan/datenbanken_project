@@ -5,6 +5,7 @@ from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import json
 from flask import jsonify
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'our_realy_realy_secret_key'
@@ -40,6 +41,7 @@ class ShoppingCartProduct(db.Model):
     restaurant_id = db.Column(db.Integer, nullable=False)
 
 
+
 shopping_cart_products = db.Table('shopping_cart_products',
     db.Column('shopping_cart_id', db.Integer, db.ForeignKey('shopping_cart.id')),
     db.Column('product_id', db.Integer, db.ForeignKey('product.id')),
@@ -58,6 +60,8 @@ class Order(db.Model):
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)
     quantities = db.relationship('OrderProduct', backref='order', lazy='dynamic')
     status = db.Column(db.String(20), nullable=False, default='Pending')  # By default 'Pending' is set, but you can customize the statuses as needed
+    note = db.Column(db.String(255), nullable=True)
+
 
 class OrderProduct(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -85,6 +89,7 @@ class Restaurant(UserMixin, db.Model):
     plz_list = db.Column(db.String, nullable=True)
     opening_hour = db.Column(db.Time, nullable=False)
     closing_hour = db.Column(db.Time, nullable=False)
+    photo_path = db.Column(db.String(255), nullable=True)
 
     def add_plz(self, plz):
         plz_list = self.get_plz()
@@ -96,6 +101,10 @@ class Restaurant(UserMixin, db.Model):
 
     def get_plz(self):
         return json.loads(self.plz_list) if self.plz_list else []
+    
+    def set_photo_path(self, photo_path):
+        # Replace backslashes with forward slashes
+        self.photo_path = photo_path.replace('\\', '/')
 
 
 
@@ -104,7 +113,13 @@ class Product(db.Model):
     name = db.Column(db.String(50), nullable=False)
     price = db.Column(db.Integer, nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    
+    photo_path = db.Column(db.String(255), nullable=True)
+    category = db.Column(db.String(50), nullable=True)
+    description = db.Column(db.String(70), nullable=True)
+
+    def set_photo_path(self, photo_path):
+        # Replace backslashes with forward slashes
+        self.photo_path = photo_path.replace('\\', '/')
 
     
 with app.app_context():
@@ -168,7 +183,7 @@ def get_next_restaurant_id():
         return 1000 
 
 
-@app.route("/loginForRestaurant",methods=['POST','GET'])
+@app.route("/loginForRestaurant", methods=['POST', 'GET'])
 def loginForRestaurant():
     if request.method == 'POST':
         if "register" in request.form:
@@ -180,17 +195,47 @@ def loginForRestaurant():
             opening_hour = request.form["opening_hour"]
             closing_hour = request.form["closing_hour"]
 
+            # Check if a file was uploaded
+            if 'restaurant_photo' in request.files:
+                file = request.files['restaurant_photo']
+
+                # Save the file to a desired location
+                if file:
+                    # Choose a secure folder to save the uploaded file
+                    upload_folder = 'uploads'
+                    
+                    # Ensure the folder exists
+                    if not os.path.exists(upload_folder):
+                        os.makedirs(upload_folder)
+
+                    # Save the file with a unique filename
+                    file_path = os.path.join(upload_folder, file.filename)
+                    file.save(file_path)
+
             opening_hour = datetime.strptime(opening_hour, "%H:%M").time()
             closing_hour = datetime.strptime(closing_hour, "%H:%M").time()
 
-            db.session.commit()
+            file_path = file_path.replace('\\', '/')
+            # Create a new restaurant object
+            new_restaurant = Restaurant(
+                opening_hour=opening_hour,
+                closing_hour=closing_hour,
+                username=username,
+                password=hashed_password,
+                address=address,
+                description=description,
+                is_user=False
+            )
 
-            new_restaurant = Restaurant(opening_hour=opening_hour,closing_hour=closing_hour,username=username,password=hashed_password,address=address,description=description,is_user=False)
+            # Set the photo_path attribute if a file was uploaded
+            if 'file_path' in locals():
+                new_restaurant.photo_path = file_path
             new_restaurant.id = get_next_restaurant_id()
+            # Save the restaurant to the database
             db.session.add(new_restaurant)
             db.session.commit()
 
-            flash('You are successfully registered. Now you can log in !', 'success')
+            flash('You are successfully registered. Now you can log in!', 'success')
 
         elif "login" in request.form:
             username= request.form["login_username"]
@@ -207,7 +252,6 @@ def loginForRestaurant():
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
-        
     return render_template("loginForRestaurant.html")
 
 @app.route("/shopping-cart",methods=['POST','GET'])
@@ -246,8 +290,16 @@ def my_orders():
 @app.route("/restaurant/<int:restaurant_id>", methods=['POST', 'GET'])
 def restaurant_page(restaurant_id):
     restaurant = Restaurant.query.get(restaurant_id)
+    categories = set(product.category for product in restaurant.products)
+    selected_category = request.args.get('category', None)
 
-    return render_template("restaurant.html", restaurant=restaurant)
+    if selected_category:
+        filtered_products = [product for product in restaurant.products if product.category == selected_category]
+    else:
+        filtered_products = restaurant.products
+
+    return render_template("restaurant.html", restaurant=restaurant, categories=categories, selected_category=selected_category, products=filtered_products)
+
 
 def calculate_total(shopping_cart):
     total = 0
@@ -353,22 +405,10 @@ def place_order():
     shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
     shopping_cart_product = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id).first()
 
-    print("Shopping Cart:", shopping_cart)
-    print("Shopping Cart Product:", shopping_cart_product)
-
-    print(is_restaurant_open(shopping_cart_product.restaurant_id))
-    print(is_restaurant_open(shopping_cart_product.restaurant_id))
-    print(is_restaurant_open(shopping_cart_product.restaurant_id))
-    print(is_restaurant_open(shopping_cart_product.restaurant_id))
-    print(is_restaurant_open(shopping_cart_product.restaurant_id))
-    print(is_restaurant_open(shopping_cart_product.restaurant_id))
     if is_restaurant_open(shopping_cart_product.restaurant_id):
-        print("Inside first if block")
         # Check the current time against the restaurant's opening and closing hours
         if shopping_cart:
-            print("Inside second if block")
             if shopping_cart.quantities.count() > 0:
-                print("Inside third if block")
                 # Create an order
                 order = Order(user_id=user.id, order_date=datetime.utcnow(), total_amount=calculate_total(shopping_cart))
 
@@ -381,7 +421,8 @@ def place_order():
 
                 # Set the restaurant_id for the order
                 order.restaurant_id = shopping_cart_product.restaurant_id
-
+                order_note = request.form.get('order_note')
+                order.note = order_note
                 # Save the order to the database
                 db.session.add(order)
                 db.session.commit()
@@ -393,7 +434,6 @@ def place_order():
                 return redirect(url_for('home'))
 
     # If any of the conditions fail, redirect to the shoppingCart page with an error message
-    print("Outside if block")
     flash('Not available for ordering. Please check your shopping cart.', 'danger')
     return redirect(url_for('shoppingCart'))
 
@@ -436,6 +476,9 @@ def clear_shopping_cart(shopping_cart):
     db.session.commit()
 
 
+
+
+
 @app.route("/my_restaurant",methods=['POST','GET'])
 def my_restaurant():
     restaurant = Restaurant.query.get(current_user.id)
@@ -443,8 +486,27 @@ def my_restaurant():
         if "add_product" in request.form:
             product_name = request.form["product_name"]
             price = request.form["price"]
+            category = request.form.get("category")  
+            description = request.form["description"]  
 
-            new_product = Product(name=product_name,price=price,restaurant_id=current_user.id)
+            if 'product_photo' in request.files:
+                file = request.files['product_photo']
+
+                # Save the file to a desired location
+                if file:
+                    # Choose a secure folder to save the uploaded file
+                    upload_folder = 'uploads'
+                    
+                    # Ensure the folder exists
+                    if not os.path.exists(upload_folder):
+                        os.makedirs(upload_folder)
+
+                    # Save the file with a unique filename
+                    file_path = os.path.join(upload_folder, file.filename)
+                    file.save(file_path)
+
+            file_path = file_path.replace('\\', '/')
+            new_product = Product(name=product_name, price=price, restaurant_id=current_user.id, category=category, photo_path=file_path,description=description)
             db.session.add(new_product)
             db.session.commit()
         elif "add_plz" in request.form:

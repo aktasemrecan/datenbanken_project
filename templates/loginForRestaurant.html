@@ -11,11 +11,17 @@
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
         crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../static/loginForRestaurant.css" type="text/css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 </head>
 
 <body>
+    <div class="navbar navbar-dark bg-success   navbar-expand-lg ">
+        <div class="container-fluid justify-content-between ">
+            <a class="navbar-brand" href="/">Lieferspatz</a>
+        </div>
+    </div>
     <div class="translate-middle position-absolute top-50 start-50 d-flex gap-5">
         <div class=" border px-4 py-3 border-3 rounded-2 d-grid align-items-center ">
             <form id="fromFeatures" action="/loginForRestaurant" method="POST"
@@ -27,18 +33,19 @@
             </form>
         </div>
         <div class="border px-4 py-3 border-3 rounded-2">
-            <form id="fromFeatures" action="/loginForRestaurant" method="POST"
+            <form id="fromFeatures" action="/loginForRestaurant" method="POST" enctype="multipart/form-data"
                 class="d-grid gap-3 input-group justify-content-center">
                 <h3>Register</h3>
-                <input type="text" id="register_username" name="register_username" placeholder="Restaurant Name"
+                <input type="text" id="register_username" name="register_username" placeholder="Username..."
                     class="form-control">
                 <input type="password" name="register_password" placeholder="Password..." class="form-control">
                 <input type="text" name="register_address" placeholder="Address..." class="form-control">
                 <input type="text" name="description" placeholder="Description..." class="form-control">
-                <label for="opening_hour">Opening Hour</label>
-                <input type="time"name="opening_hour" placeholder="Opening Hour" class="form-control">
-                <label for="opening_hour">Closing Hour</label>
-                <input type="time" name="closing_hour" placeholder="Closing Hour" class="form-control">
+                <input type="file" name="restaurant_photo" accept="image/*" class="form-control">
+                <label >Opening Hour</label>
+                <input type="time" name="opening_hour" placeholder="Opening Hour (HH:MM)" class="form-control">
+                <label >Closing Hour</label>
+                <input type="time" name="closing_hour" placeholder="Closing Hour (HH:MM)" class="form-control">
                 <button type="submit" class="btn btn-outline-primary mx-auto" name="register">Register</button>
             </form>
         </div>

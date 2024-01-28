@@ -11,14 +11,15 @@
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
         crossorigin="anonymous"></script>
     <link rel="stylesheet" href="../static/index.css" type="text/css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 
 </head>
 
 <body>
     <div class="navbar navbar-dark bg-success   navbar-expand-lg ">
         <div class="container-fluid justify-content-between ">
-            <a class="navbar-brand" href="/">Our food service</a>
+            <a class="navbar-brand" href="/">Lieferspatz</a>
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if current_user.is_user == false and current_user.is_authenticated %}
                 <li class="nav-item">
@@ -66,18 +67,23 @@
     <div class="w-100 p-5 d-flex align-items-center justify-content-center ">
         <div class="justify-content-center">
             {% for order in orders|reverse %}
+            {% if not order.status == "Cancelled" and not order.status == "Completed" %}
+
             <div class="card mb-2" style="width: 900px !important;">
                 <div class="card-body  justify-content-between " style="width: 300px !important;">
                     <p class="card-text"> <b>Order Date:</b>
                         {{order.order_date.strftime('%Y-%m-%d %H:%M')}} </p>
                     <p class="card-text"> <b>Total Price:</b>
                         {{order.total_amount}}€</p>
+                    <p class="card-text"> <b>Order Note:</b>
+                        {{order.note}}</p>
                     <strong>Products:</strong>
                     <ul>
                         {% for order_product in order.quantities %}
                         <li>Product Name: <b>{{ order_product.product.name}}</b> </li>
                         <p class="p-0 m-0"> Quantity: <b>{{order_product.quantity}}</b> - Unit Price:
-                            <b>{{order_product.product.price}}€</b></p>
+                            <b>{{order_product.product.price}}€</b>
+                        </p>
                         <p> Total Price: <b>{{order_product.product.price * order_product.quantity}}€</b></p>
                         {% endfor %}
                     </ul>
@@ -97,6 +103,88 @@
 
                 </div>
             </div>
+            {% endif %}
+            {% endfor %}
+
+
+            {% for order in orders|reverse %}
+            {% if order.status == "Cancelled" %}
+
+            <div class="card mb-2" style="width: 900px !important;">
+                <div class="card-body  justify-content-between " style="width: 300px !important;">
+                    <p class="card-text"> <b>Order Date:</b>
+                        {{order.order_date.strftime('%Y-%m-%d %H:%M')}} </p>
+                    <p class="card-text"> <b>Total Price:</b>
+                        {{order.total_amount}}€</p>
+                    <p class="card-text"> <b>Order Note:</b>
+                        {{order.note}}</p>
+                    <strong>Products:</strong>
+                    <ul>
+                        {% for order_product in order.quantities %}
+                        <li>Product Name: <b>{{ order_product.product.name}}</b> </li>
+                        <p class="p-0 m-0"> Quantity: <b>{{order_product.quantity}}</b> - Unit Price:
+                            <b>{{order_product.product.price}}€</b>
+                        </p>
+                        <p> Total Price: <b>{{order_product.product.price * order_product.quantity}}€</b></p>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    {% if order.status == "Pending" %}
+                    <h3 style="color: gray;">Pending</h3>
+                    {% endif %}
+                    {% if order.status == "On the way" %}
+                    <h3 style="color: orange;">On the way!</h3>
+                    {% endif %}
+                    {% if order.status == "Completed" %}
+                    <h3 style="color: green;">Completed!</h3>
+                    {% endif %}
+                    {% if order.status == "Cancelled" %}
+                    <h3 style="color: red;">Cancelled!</h3>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            {% for order in orders|reverse %}
+            {% if order.status == "Completed" %}
+
+            <div class="card mb-2" style="width: 900px !important;">
+                <div class="card-body  justify-content-between " style="width: 300px !important;">
+                    <p class="card-text"> <b>Order Date:</b>
+                        {{order.order_date.strftime('%Y-%m-%d %H:%M')}} </p>
+                    <p class="card-text"> <b>Total Price:</b>
+                        {{order.total_amount}}€</p>
+                    <p class="card-text"> <b>Order Note:</b>
+                        {{order.note}}</p>
+                    <strong>Products:</strong>
+                    <ul>
+                        {% for order_product in order.quantities %}
+                        <li>Product Name: <b>{{ order_product.product.name}}</b> </li>
+                        <p class="p-0 m-0"> Quantity: <b>{{order_product.quantity}}</b> - Unit Price:
+                            <b>{{order_product.product.price}}€</b>
+                        </p>
+                        <p> Total Price: <b>{{order_product.product.price * order_product.quantity}}€</b></p>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    {% if order.status == "Pending" %}
+                    <h3 style="color: gray;">Pending</h3>
+                    {% endif %}
+                    {% if order.status == "On the way" %}
+                    <h3 style="color: orange;">On the way!</h3>
+                    {% endif %}
+                    {% if order.status == "Completed" %}
+                    <h3 style="color: green;">Completed!</h3>
+                    {% endif %}
+                    {% if order.status == "Cancelled" %}
+                    <h3 style="color: red;">Cancelled!</h3>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endif %}
             {% endfor %}
         </div>
     </div>

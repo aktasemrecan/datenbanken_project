@@ -17,7 +17,7 @@
 <body>
     <div class="navbar navbar-dark bg-success   navbar-expand-lg ">
         <div class="container-fluid justify-content-between ">
-            <a class="navbar-brand" href="/">Our food service</a>
+            <a class="navbar-brand" href="/">Lieferspatz</a>
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if current_user.is_user == false and current_user.is_authenticated %}
                 <li class="nav-item">
@@ -70,6 +70,8 @@
                 <div class="mb-3 border border-2 border-primary rounded-4 p-4">
                     <h3>Order Date </h3>
                     <p>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <h3>Order Note </h3>
+                    <p>{{ order.note }}</p>
                     <h3>Order Details:</h3>
                     <ul>
                         {% for order_product in order.quantities %}
