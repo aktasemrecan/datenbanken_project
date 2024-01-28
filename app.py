@@ -57,8 +57,7 @@ class Order(db.Model):
     products = db.relationship('Product', secondary='order_products', backref='orders', lazy='dynamic')
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)
     quantities = db.relationship('OrderProduct', backref='order', lazy='dynamic')
-    status = db.Column(db.String(20), nullable=False, default='Pending')  # Varsayılan olarak 'Pending' belirlendi, durumları ihtiyacınıza göre özelleştirebilirsiniz
-
+    status = db.Column(db.String(20), nullable=False, default='Pending')  # By default 'Pending' is set, but you can customize the statuses as needed
 
 class OrderProduct(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -165,7 +164,7 @@ def get_next_restaurant_id():
     if last_restaurant:
         return last_restaurant.id + 1
     else:
-        # Eğer hiç restoran yoksa başlangıç değeri belirle
+        # If there are no restaurants, set a starting value
         return 1000 
 
 
@@ -215,7 +214,7 @@ def loginForRestaurant():
 def shoppingCart():
     shopping_cart = current_user.shopping_cart[0] if current_user.shopping_cart else None
 
-    # Eğer alışveriş sepeti varsa, ürünleri al
+    # If there is a shopping cart, evaluate the products
     products_in_cart = []
     if shopping_cart:
         for cart_product in shopping_cart.quantities:
@@ -227,7 +226,7 @@ def shoppingCart():
         total_price = calculate_total(shopping_cart)
     else:
         total_price = 0
-        print("Alışveriş sepetiniz boş veya tanımlı değil.")
+        print("Your shopping cart is empty or not defined.")
 
 
     print(products_in_cart)
@@ -265,13 +264,13 @@ def calculate_total(shopping_cart):
 def add_to_cart(product_id):
     user = current_user
 
-    # Kullanıcının alışveriş sepetini kontrol et veya oluştur
+    # Check or create user's shopping cart
     if not user.shopping_cart:
         shopping_cart = ShoppingCart(user=user)
         db.session.add(shopping_cart)
         db.session.commit()
     else:
-        # Kullanıcının alışveriş sepetini al
+        # Get user's shopping cart
         shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
 
     # Check if the product is already in the cart
@@ -293,7 +292,7 @@ def add_to_cart(product_id):
 
 
     db.session.commit()
-    flash('Ürün sepete eklendi!', 'success')
+    flash('The product has been added to the cart!', 'success')
     return redirect(url_for('restaurant_page', restaurant_id=request.form.get('restaurant_id')))
 
 
@@ -314,11 +313,11 @@ def reduce_quantity(product_id):
                 db.session.delete(cart_product)
 
             db.session.commit()
-            flash('Ürün miktarı azaltıldı!', 'success')
+            flash('Product quantity reduced!', 'success')
         else:
-            flash('Ürün sepetinizde bulunmamaktadır!', 'danger')
+            flash('Product is not in your cart!', 'danger')
     else:
-        flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
+        flash('Your shopping cart is empty or not defined.', 'danger')
 
 
     return redirect(url_for('shoppingCart'))
@@ -338,11 +337,11 @@ def increment_quantity(product_id):
             cart_product.quantity += 1
 
             db.session.commit()
-            flash('Ürün miktarı arttirildi!', 'success')
+            flash('Product quantity increased!', 'success')
         else:
-            flash('Ürün sepetinizde bulunmamaktadır!', 'danger')
+            flash('Product is not in your cart!', 'danger')
     else:
-        flash('Alışveriş sepetiniz boş veya tanımlı değil.', 'danger')
+        flash('Your shopping cart is empty or not defined.', 'danger')
 
 
     return redirect(url_for('shoppingCart'))
@@ -390,12 +389,12 @@ def place_order():
                 # Clear the shopping cart
                 clear_shopping_cart(shopping_cart)
 
-                flash('Siparişiniz başarıyla alındı!', 'success')
+                flash('Your order has been received!', 'success')
                 return redirect(url_for('home'))
 
     # If any of the conditions fail, redirect to the shoppingCart page with an error message
     print("Outside if block")
-    flash('Sipariş vermek için uygun değil. Lütfen alışveriş sepetinizi kontrol edin.', 'danger')
+    flash('Not available for ordering. Please check your shopping cart.', 'danger')
     return redirect(url_for('shoppingCart'))
 
 
@@ -431,7 +430,7 @@ def calculate_total(shopping_cart):
     return total
 
 def clear_shopping_cart(shopping_cart):
-    # Alışveriş sepetini temizle
+    # Clear shopping cart
     for cart_product in shopping_cart.quantities:
         db.session.delete(cart_product)
     db.session.commit()
@@ -470,16 +469,16 @@ def my_restaurant():
 @login_required
 def change_order_status(order_id):
     if not current_user.is_user:
-        # Siparişin restaurant tarafından kontrol edilip edilmediğini kontrol et
+        # Check if the order is changeable by the user
         order = Order.query.get(order_id)
 
         if order and order.restaurant_id == current_user.id:
             new_status = request.form.get('status')
             order.status = new_status
             db.session.commit()
-            flash(f'Sipariş durumu başarıyla değiştirildi: {new_status}', 'success')
+            flash(f'Order status changed to: {new_status}', 'success')
         else:
-            flash('Bu siparişi güncelleme yetkiniz yok.', 'danger')
+            flash('You are not authorized to update this order.', 'danger')
     else:
         flash('Access denied. You are not a restaurant user.', 'danger')
 
