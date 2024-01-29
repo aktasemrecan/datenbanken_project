@@ -62,7 +62,7 @@
                 <div class="card mb-2" style="width: 600px;">
                     <div class="card-body d-flex">
                         {% if restaurant.photo_path %}
-                        <img src="{{ url_for('static', filename=restaurant.photo_path) }}" width="45px" height="45px" style="width:45px;height:45px" class="me-2" alt="Product Photo">
+                        <img src="{{ url_for('static', filename=restaurant.photo_path) }}" style="width:45px;height:45px" class="me-2" alt="Product Photo">
 
                         {% endif %}
                         <div>
