@@ -59,7 +59,7 @@ class Order(db.Model):
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)
     quantities = db.relationship('OrderProduct', backref='order', lazy='dynamic')
     status = db.Column(db.String(20), nullable=False, default='Pending')  
-    note = db.Column(db.String(255), nullable=True)
+    note = db.Column(db.String(100), nullable=True)
 
 
 class OrderProduct(db.Model):
