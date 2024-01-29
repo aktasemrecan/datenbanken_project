@@ -4,7 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import json
-from flask import jsonify
 import os
 
 app = Flask(__name__)
@@ -59,7 +58,7 @@ class Order(db.Model):
     products = db.relationship('Product', secondary='order_products', backref='orders', lazy='dynamic')
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=True)
     quantities = db.relationship('OrderProduct', backref='order', lazy='dynamic')
-    status = db.Column(db.String(20), nullable=False, default='Pending')  # By default 'Pending' is set, but you can customize the statuses as needed
+    status = db.Column(db.String(20), nullable=False, default='Pending')  
     note = db.Column(db.String(255), nullable=True)
 
 
@@ -72,7 +71,6 @@ class OrderProduct(db.Model):
 
 
 
-# Define a many-to-many relationship table between Order and Product
 order_products = db.Table('order_products',
     db.Column('order_id', db.Integer, db.ForeignKey('order.id')),
     db.Column('product_id', db.Integer, db.ForeignKey('product.id'))
@@ -103,7 +101,6 @@ class Restaurant(UserMixin, db.Model):
         return json.loads(self.plz_list) if self.plz_list else []
     
     def set_photo_path(self, photo_path):
-        # Replace backslashes with forward slashes
         self.photo_path = photo_path.replace('\\', '/')
 
 
@@ -118,7 +115,6 @@ class Product(db.Model):
     description = db.Column(db.String(70), nullable=True)
 
     def set_photo_path(self, photo_path):
-        # Replace backslashes with forward slashes
         self.photo_path = photo_path.replace('\\', '/')
 
     
@@ -162,11 +158,9 @@ def loginForCustomer():
             user = User.query.filter_by(is_user=True,username=username).first()
 
             if user and bcrypt.check_password_hash(user.password, password):
-                print(f"Successfully retrieved user: {user.username}")
                 logout_user()
                 login_user(user)
                 flash('You are successfully log in. Now you can order something !', 'success')
-                print(f"Username: {username}, Password: {password}")
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
@@ -174,12 +168,12 @@ def loginForCustomer():
     return render_template("loginForCustomer.html")
 
 def get_next_restaurant_id():
+    
     last_restaurant = Restaurant.query.order_by(Restaurant.id.desc()).first()
 
     if last_restaurant:
         return last_restaurant.id + 1
     else:
-        # If there are no restaurants, set a starting value
         return 1000 
 
 
@@ -195,20 +189,15 @@ def loginForRestaurant():
             opening_hour = request.form["opening_hour"]
             closing_hour = request.form["closing_hour"]
 
-            # Check if a file was uploaded
             if 'restaurant_photo' in request.files:
                 file = request.files['restaurant_photo']
 
-                # Save the file to a desired location
                 if file:
-                    # Choose a secure folder to save the uploaded file
                     upload_folder = 'uploads'
                     
-                    # Ensure the folder exists
                     if not os.path.exists(upload_folder):
                         os.makedirs(upload_folder)
 
-                    # Save the file with a unique filename
                     file_path = os.path.join(upload_folder, file.filename)
                     file.save(file_path)
 
@@ -216,7 +205,6 @@ def loginForRestaurant():
             closing_hour = datetime.strptime(closing_hour, "%H:%M").time()
 
             file_path = file_path.replace('\\', '/')
-            # Create a new restaurant object
             new_restaurant = Restaurant(
                 opening_hour=opening_hour,
                 closing_hour=closing_hour,
@@ -227,11 +215,9 @@ def loginForRestaurant():
                 is_user=False
             )
 
-            # Set the photo_path attribute if a file was uploaded
             if 'file_path' in locals():
                 new_restaurant.photo_path = file_path
             new_restaurant.id = get_next_restaurant_id()
-            # Save the restaurant to the database
             db.session.add(new_restaurant)
             db.session.commit()
 
@@ -244,11 +230,9 @@ def loginForRestaurant():
             restaurant = Restaurant.query.filter_by(is_user=False,username=username).first()
 
             if restaurant and bcrypt.check_password_hash(restaurant.password, password):
-                print(f"Successfully retrieved restaurant: {restaurant.username}")
                 logout_user()
                 login_user(restaurant)
                 flash('You are successfully log in. Now you can order something !', 'success')
-                print(f"Username: {username}, Password: {password}")
                 return redirect(url_for('home'))
             else:
                 flash('Please check your id or password again. !', 'danger')
@@ -258,7 +242,6 @@ def loginForRestaurant():
 def shoppingCart():
     shopping_cart = current_user.shopping_cart[0] if current_user.shopping_cart else None
 
-    # If there is a shopping cart, evaluate the products
     products_in_cart = []
     if shopping_cart:
         for cart_product in shopping_cart.quantities:
@@ -270,10 +253,6 @@ def shoppingCart():
         total_price = calculate_total(shopping_cart)
     else:
         total_price = 0
-        print("Your shopping cart is empty or not defined.")
-
-
-    print(products_in_cart)
 
     return render_template("shopping_cart.html",shoppingCart= products_in_cart,total_price=total_price)
 
@@ -282,7 +261,6 @@ def shoppingCart():
 def my_orders():
     user = current_user
 
-    # Get the orders for the current user
     orders = Order.query.filter_by(user_id=user.id).all()
 
     return render_template("orders.html", orders=orders)
@@ -303,7 +281,6 @@ def restaurant_page(restaurant_id):
 
 def calculate_total(shopping_cart):
     total = 0
-
     for cart_product in shopping_cart.quantities:
         product = Product.query.get(cart_product.product_id)
         total += product.price * cart_product.quantity
@@ -316,32 +293,25 @@ def calculate_total(shopping_cart):
 def add_to_cart(product_id):
     user = current_user
 
-    # Check or create user's shopping cart
     if not user.shopping_cart:
         shopping_cart = ShoppingCart(user=user)
         db.session.add(shopping_cart)
         db.session.commit()
     else:
-        # Get user's shopping cart
         shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
 
-    # Check if the product is already in the cart
-    existing_item = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
+    itemAlready = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
 
-    product = Product.query.get(product_id)  # Define product here
+    product = Product.query.get(product_id)  
 
-    if existing_item:
-        # If the product is already in the cart, increase the quantity
-        existing_item.quantity += 1
+    if itemAlready:
+        itemAlready.quantity += 1
     else:
-        # Otherwise, add a new item with quantity 1
-        existing_item = ShoppingCartProduct(shopping_cart_id=shopping_cart.id, product_id=product_id, quantity=1, restaurant_id=product.restaurant_id)
-        db.session.add(existing_item)
+        itemAlready = ShoppingCartProduct(shopping_cart_id=shopping_cart.id, product_id=product_id, quantity=1, restaurant_id=product.restaurant_id)
+        db.session.add(itemAlready)
 
-    # Set the restaurant_id for the shopping cart product
     product_restaurant_id = product.restaurant_id
-    existing_item.restaurant_id = product_restaurant_id
-
+    itemAlready.restaurant_id = product_restaurant_id
 
     db.session.commit()
     flash('The product has been added to the cart!', 'success')
@@ -382,7 +352,6 @@ def increment_quantity(product_id):
     shopping_cart = user.shopping_cart[0] if user.shopping_cart else None
 
     if shopping_cart:
-        # Check if the product is in the shopping cart
         cart_product = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id, product_id=product_id).first()
 
         if cart_product:
@@ -406,40 +375,30 @@ def place_order():
     shopping_cart_product = ShoppingCartProduct.query.filter_by(shopping_cart_id=shopping_cart.id).first()
 
     if is_restaurant_open(shopping_cart_product.restaurant_id):
-        # Check the current time against the restaurant's opening and closing hours
         if shopping_cart:
             if shopping_cart.quantities.count() > 0:
-                # Create an order
                 order = Order(user_id=user.id, order_date=datetime.utcnow(), total_amount=calculate_total(shopping_cart))
 
                 for cart_product in shopping_cart.quantities:
                     product = Product.query.get(cart_product.product_id)
-
-                    # Add quantity information to the order
                     order_product = OrderProduct(product_id=product.id, quantity=cart_product.quantity)
                     order.quantities.append(order_product)
 
-                # Set the restaurant_id for the order
                 order.restaurant_id = shopping_cart_product.restaurant_id
                 order_note = request.form.get('order_note')
                 order.note = order_note
-                # Save the order to the database
                 db.session.add(order)
                 db.session.commit()
 
-                # Clear the shopping cart
                 clear_shopping_cart(shopping_cart)
-
 
                 flash('Your order has been received!', 'success')
                 return redirect(url_for('home'))
 
-    # If any of the conditions fail, redirect to the shoppingCart page with an error message
-    flash('Not available for ordering. Please check your shopping cart.', 'danger')
+    flash('The restaurant is already closed. Sorry :(', 'danger')
     return redirect(url_for('shoppingCart'))
 
 
-# Helper function to check if the restaurant is currently open
 def is_restaurant_open(restaurantId):
     restaurant = Restaurant.query.filter_by(id=restaurantId).first()
     current_time = datetime.now().time()
@@ -454,12 +413,10 @@ def restaurant_orders():
     if not current_user.is_user:
         restaurant = Restaurant.query.get(current_user.id)
 
-        # Fetch orders for the current restaurant
         orders = Order.query.filter_by(restaurant_id=current_user.id).all()
 
         return render_template("restaurant_orders.html", restaurant=restaurant, orders=orders)
     else:
-        # Handle the case where the current user is not a restaurant
         flash('Access denied. You are not a restaurant user.', 'danger')
         return redirect(url_for('home'))
 
@@ -471,12 +428,9 @@ def calculate_total(shopping_cart):
     return total
 
 def clear_shopping_cart(shopping_cart):
-    # Clear shopping cart
     for cart_product in shopping_cart.quantities:
         db.session.delete(cart_product)
     db.session.commit()
-
-
 
 
 
@@ -493,16 +447,12 @@ def my_restaurant():
             if 'product_photo' in request.files:
                 file = request.files['product_photo']
 
-                # Save the file to a desired location
                 if file:
-                    # Choose a secure folder to save the uploaded file
                     upload_folder = 'uploads'
                     
-                    # Ensure the folder exists
                     if not os.path.exists(upload_folder):
                         os.makedirs(upload_folder)
 
-                    # Save the file with a unique filename
                     file_path = os.path.join(upload_folder, file.filename)
                     file.save(file_path)
 
@@ -511,18 +461,9 @@ def my_restaurant():
             db.session.add(new_product)
             db.session.commit()
         elif "add_plz" in request.form:
-            plz = int(request.form["add_plz"])  # Convert the input value to an integer
+            plz = request.form["add_plz"]
             restaurant.add_plz(plz)
             db.session.commit()
-        elif "set_hours" in request.form:
-            opening_hour = request.form["opening_hour"]
-            closing_hour = request.form["closing_hour"]
-
-            restaurant.opening_hour = datetime.strptime(opening_hour, "%H:%M").time()
-            restaurant.closing_hour = datetime.strptime(closing_hour, "%H:%M").time()
-
-            db.session.commit()
-
 
     plz_list = restaurant.get_plz()
     products = Product.query.filter_by(restaurant_id=current_user.id)
@@ -532,7 +473,6 @@ def my_restaurant():
 @login_required
 def change_order_status(order_id):
     if not current_user.is_user:
-        # Check if the order is changeable by the user
         order = Order.query.get(order_id)
 
         if order and order.restaurant_id == current_user.id:
@@ -546,6 +486,46 @@ def change_order_status(order_id):
         flash('Access denied. You are not a restaurant user.', 'danger')
 
     return redirect(url_for('restaurant_orders'))
+
+
+@app.route("/delete_product/<int:product_id>", methods=['POST'])
+@login_required
+def delete_product(product_id):
+    if not current_user.is_user:
+        product_to_delete = Product.query.get(product_id)
+
+        if product_to_delete and product_to_delete.restaurant_id == current_user.id:
+            db.session.delete(product_to_delete)
+            db.session.commit()
+            flash('Product deleted successfully!', 'success')
+        else:
+            flash('You are not authorized to delete this product.', 'danger')
+    else:
+        flash('Access denied. You are not a restaurant user.', 'danger')
+
+    return redirect(url_for('my_restaurant'))
+
+
+@app.route("/update_product/<int:product_id>", methods=['POST'])
+@login_required
+def update_product(product_id):
+    if not current_user.is_user:
+        updatedP = Product.query.get(product_id)
+
+        if updatedP and updatedP.restaurant_id == current_user.id:
+            updatedP.name = request.form["updated_product_name"]
+            updatedP.price = request.form["updated_price"]
+            updatedP.category = request.form["updated_category"]
+            updatedP.description = request.form["updated_description"]
+
+            db.session.commit()
+            flash('Product updated successfully!', 'success')
+        else:
+            flash('You are not authorized to update this product.', 'danger')
+    else:
+        flash('Access denied. You are not a restaurant user.', 'danger')
+
+    return redirect(url_for('my_restaurant'))
 
 @login_manager.user_loader  
 def load_user(user_id):

@@ -16,6 +16,16 @@
 </head>
 
 <body>
+    <div id="notification-bar">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    
     <div class="navbar navbar-dark bg-success   navbar-expand-lg ">
         <div class="container-fluid justify-content-between ">
             <a class="navbar-brand" href="/">Lieferspatz</a>

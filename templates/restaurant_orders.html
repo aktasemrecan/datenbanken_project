@@ -67,6 +67,7 @@
             <h1>{{ restaurant.username }} - Orders</h1>
             <div class="border border-2 rounded-4 p-3 ">
                 {% for order in orders|reverse %}
+                {% if not order.status == "Cancelled" and not order.status == "Completed" %}
                 <div class="mb-3 border border-2 border-primary rounded-4 p-4">
                     <h3>Order Date </h3>
                     <p>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</p>
@@ -111,6 +112,103 @@
                         <button type="submit">Change Status</button>
                     </form>
                 </div>
+                {% endif %}
+                {% endfor %}
+                {% for order in orders|reverse %}
+                {% if order.status == "Cancelled" and not order.status == "Completed" %}
+                <div class="mb-3 border border-2 border-primary rounded-4 p-4">
+                    <h3>Order Date </h3>
+                    <p>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <h3>Order Note </h3>
+                    <p>{{ order.note }}</p>
+                    <h3>Order Details:</h3>
+                    <ul>
+                        {% for order_product in order.quantities %}
+                        <li>Product Name: <b>{{ order_product.product.name}}</b> - Quantity:
+                            <b>{{order_product.quantity}}</b> - Unit Price: <b>{{order_product.product.price}}€</b>
+                            - Total Price: <b>{{order_product.product.price * order_product.quantity}}€</b>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    <h3 class="d-flex">Total Amount: <p style="color: green;margin-left: 5px;"> {{
+                            order.total_amount }} €</p>
+                    </h3>
+                    <hr>
+                    {% if order.status == "Pending" %}
+                    <h3 style="color: gray;">Pending</h3>
+                    {% endif %}
+                    {% if order.status == "On the way" %}
+                    <h3 style="color: orange;">On the way!</h3>
+                    {% endif %}
+                    {% if order.status == "Completed" %}
+                    <h3 style="color: green;">Completed!</h3>
+                    {% endif %}
+                    {% if order.status == "Cancelled" %}
+                    <h3 style="color: red;">Cancelled!</h3>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('change_order_status', order_id=order.id) }}">
+                        <select name="status">
+                            <option value="Pending" {% if order.status=='Pending' %}selected{% endif %}>Pending</option>
+                            <option value="On the way" {% if order.status=='On the way' %}selected{% endif %}>On the way
+                            </option>
+                            <option value="Completed" {% if order.status=='Completed' %}selected{% endif %}>Completed
+                            </option>
+                            <option value="Cancelled" {% if order.status=='Cancelled' %}selected{% endif %}>Cancelled
+                            </option>
+                        </select>
+                        <button type="submit">Change Status</button>
+                    </form>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% for order in orders|reverse %}
+                {% if not order.status == "Cancelled" and order.status == "Completed" %}
+                <div class="mb-3 border border-2 border-primary rounded-4 p-4">
+                    <h3>Order Date </h3>
+                    <p>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <h3>Order Note </h3>
+                    <p>{{ order.note }}</p>
+                    <h3>Order Details:</h3>
+                    <ul>
+                        {% for order_product in order.quantities %}
+                        <li>Product Name: <b>{{ order_product.product.name}}</b> - Quantity:
+                            <b>{{order_product.quantity}}</b> - Unit Price: <b>{{order_product.product.price}}€</b>
+                            - Total Price: <b>{{order_product.product.price * order_product.quantity}}€</b>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    <h3 class="d-flex">Total Amount: <p style="color: green;margin-left: 5px;"> {{
+                            order.total_amount }} €</p>
+                    </h3>
+                    <hr>
+                    {% if order.status == "Pending" %}
+                    <h3 style="color: gray;">Pending</h3>
+                    {% endif %}
+                    {% if order.status == "On the way" %}
+                    <h3 style="color: orange;">On the way!</h3>
+                    {% endif %}
+                    {% if order.status == "Completed" %}
+                    <h3 style="color: green;">Completed!</h3>
+                    {% endif %}
+                    {% if order.status == "Cancelled" %}
+                    <h3 style="color: red;">Cancelled!</h3>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('change_order_status', order_id=order.id) }}">
+                        <select name="status">
+                            <option value="Pending" {% if order.status=='Pending' %}selected{% endif %}>Pending</option>
+                            <option value="On the way" {% if order.status=='On the way' %}selected{% endif %}>On the way
+                            </option>
+                            <option value="Completed" {% if order.status=='Completed' %}selected{% endif %}>Completed
+                            </option>
+                            <option value="Cancelled" {% if order.status=='Cancelled' %}selected{% endif %}>Cancelled
+                            </option>
+                        </select>
+                        <button type="submit">Change Status</button>
+                    </form>
+                </div>
+                {% endif %}
                 {% endfor %}
 
                 </ul>
