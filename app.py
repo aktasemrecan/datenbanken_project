@@ -430,6 +430,7 @@ def place_order():
                 # Clear the shopping cart
                 clear_shopping_cart(shopping_cart)
 
+
                 flash('Your order has been received!', 'success')
                 return redirect(url_for('home'))
 
